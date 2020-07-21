@@ -3,7 +3,7 @@ import routes from "../routes";
 
 export const home = async (req, res) => {
   try {
-    const videos = await Video.find({}).sort({"_id ": -1});
+    const videos = await Video.find({}).sort({"_id": -1});
     res.render("home", { pageTitle: "Home", videos });
   } catch (error) {
     console.log(error);
@@ -11,9 +11,15 @@ export const home = async (req, res) => {
   }
 };
 
-export const search = (req, res) => {
+export const search = async(req, res) => {
   const { term: searchingBy } = req.query;
-  res.render("search", { pageTitle: "Search", searchingBy });
+  let videos = [];
+  try {
+    videos = await Video.find({title: {$regex: searchingBy, $options: "i" }});
+  } catch(error) {
+    console.log(error);
+  }
+  res.render("search", { pageTitle: "Search", searchingBy, videos });
 };
 
 export const getUpload = (req, res) => {
@@ -28,8 +34,11 @@ export const postUpload = async (req, res) => {
   const newVideo = await Video.create({
     fileUrl: path,
     title,
-    description
+    description,
+    creator: req.user.id
   });
+  req.user.videos.push(newVideo._id);
+  req.user.save();
   res.redirect(routes.videoDetail(newVideo.id));
 };
 
@@ -37,7 +46,7 @@ export const videoDetail = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const video = await Video.findById(id);
+    const video = await Video.findById(id).populate('creator')
     res.render("videoDetail", { pageTitle: "Video Detail", video });
   } catch (error) {
     res.redirect(routes.home);
@@ -46,9 +55,15 @@ export const videoDetail = async (req, res) => {
 
 export const getEditVideo = async (req, res) => {
   const { id } = req.params;
-  const video = await Video.findById(id);
-
-  res.render("editVideo", { pageTitle: "EditVideo", video });
+  try {
+    const video = await Video.findById(id);
+    // if(video.creator !== req.user._id) {
+    //   throw Error();
+    // }
+      res.render("editVideo", {pageTitle: 'EditVideo', video })
+  } catch(error) {
+    res.redirect(routes.home)
+  }
 };
 
 export const postEditVideo = async (req, res) => {
