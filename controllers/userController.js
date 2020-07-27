@@ -104,7 +104,7 @@ export const postEditProfile = async(req, res) => {
     email: req.body.email,
   };
   if(req.file) {
-    bodys.avatarUrl = req.file.path
+    bodys.avatarUrl = req.file.location
   } 
   try {
     await User.findByIdAndUpdate(req.user.id, bodys);
